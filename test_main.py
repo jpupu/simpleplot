@@ -1,4 +1,23 @@
-from main import parse_args
+from main import parse_args, tokenize
+
+
+def test_tokenizer_basic():
+    assert ["foo", "bar", "path/file.txt"] == list(
+        tokenize("foo bar path/file.txt".split())
+    )
+
+
+def test_tokenizer_comma():
+    # Word-ending comma is a separator
+    assert ["foo", ",", "bar"] == list(tokenize(["foo,", "bar"]))
+    # Word-starting comma is a separator
+    assert ["foo", ",", "bar"] == list(tokenize(["foo", ",bar"]))
+    # Both work together
+    assert ["foo", ",", "bar", ","] == list(tokenize(["foo", ",bar,"]))
+    # Midword comma is NOT a separator
+    assert ["foo,bar"] == list(tokenize(["foo,bar"]))
+    # A lonely comma is just a separator
+    assert ["foo", ",", "bar"] == list(tokenize(["foo", ",", "bar"]))
 
 
 def test_file_path():
@@ -18,7 +37,7 @@ def test_data():
 
 
 def test_data_y_expressions_column_references():
-    plots = parse_args("file testdata/tens.txt y data[:\\,1], y col(1), y $1")
+    plots = parse_args("file testdata/tens.txt y data[:,1], y col(1), y $1")
     assert [0, 1, 2, 3] == list(plots[0].x)
     assert [0, 10, 20, 30] == list(plots[0].y)
 
