@@ -31,6 +31,7 @@ class PlotSpec:
     yexpr: str = "c1"
     linestyle: str = "-"
     marker: str = ""
+    label: str | None = None
 
 
 @dataclass
@@ -69,6 +70,8 @@ def parse_specs(cmdline: str | list[str]) -> list[PlotData]:
             spec.linestyle = next(tokens)
         elif token == "marker":
             spec.marker = next(tokens)
+        elif token == "label":
+            spec.label = next(tokens)
         else:
             print(f"Invalid keyword {repr(token)}", file=sys.stderr)
             sys.exit(1)
@@ -119,7 +122,7 @@ def main():
         plt.plot(
             data.x,
             data.y,
-            label=f"{spec.path}:{spec.yexpr}",
+            label=f"{spec.path}:{spec.yexpr}" if spec.label is None else spec.label,
             ls=spec.linestyle,
             marker=spec.marker,
         )
