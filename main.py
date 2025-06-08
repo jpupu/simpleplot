@@ -1,3 +1,4 @@
+import dataclasses
 from dataclasses import dataclass, field
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,21 +25,22 @@ def tokenize(cmdline: str | list[str]) -> Iterator[str]:
 
 
 @dataclass
-class PlotData:
+class PlotSpec:
     path: str = ""
+    xexpr: str = "c0"
+    yexpr: str = "c1"
+
+
+@dataclass
+class PlotData:
     x: np.ndarray = field(default_factory=lambda: np.array([]))
     y: np.ndarray = field(default_factory=lambda: np.array([]))
 
 
-def parse_args(cmdline: str | list[str]) -> list[PlotData]:
+def parse_specs(cmdline: str | list[str]) -> list[PlotData]:
     if type(cmdline) == str:
         cmdline = cmdline.split()
-    plots: list[PlotData] = []
-
-    dataset: dict[str, np.ndarray] = {}
-
-    path = ""
-    yexpr = "data[:,1]"
+    plots: list[PlotSpec] = []
 
     def add_plot():
         plot = PlotData(
@@ -48,38 +50,67 @@ def parse_args(cmdline: str | list[str]) -> list[PlotData]:
         )
         plots.append(plot)
 
+    spec = PlotSpec()
+
     tokens = tokenize(cmdline)
     for token in tokens:
         if token == ",":
-            add_plot()
-            yexpr = "data[:,1]"
-
+            plots.append(spec)
+            spec = dataclasses.replace(spec, xexpr="c0", yexpr="c1")
         elif token == "file":
-            path = next(tokens)
-            if path not in dataset:
-                m = np.loadtxt(path, ndmin=2)
-                row_numbers = np.arange(m.shape[0])
-                dataset[path] = np.insert(m, 0, row_numbers, axis=1)
-
+            spec.path = next(tokens)
+        elif token == "x":
+            spec.xexpr = next(tokens)
         elif token == "y":
-            yexpr = next(tokens)
-            for c in "0123456789":
-                yexpr = yexpr.replace(f"${c}", f"data[:,{c}]")
-
+            spec.yexpr = next(tokens)
         else:
             print(f"Invalid keyword {repr(token)}", file=sys.stderr)
             sys.exit(1)
 
-    add_plot()
+    plots.append(spec)
 
     return plots
 
 
+def eval_expr(expr: str, data: np.ndarray) -> np.ndarray:
+    locals = dict(data=data, i=data[:, 0], col=lambda c: data[:, c])
+    for i in range(0, min(10, data.shape[1])):
+        locals[f"c{i}"] = data[:, i]
+
+    # Evaluate
+    result = eval(expr, np.__dict__, locals)
+
+    # Broadcast if scalar
+    if np.isscalar(result):
+        result = np.ones(data.shape[0]) * result
+
+    return result
+
+
+def load_datas(specs: list[PlotSpec]) -> list[PlotData]:
+    def load_file(path: str) -> np.ndarray:
+        m = np.loadtxt(path, ndmin=2)
+        row_numbers = np.arange(m.shape[0])
+        return np.insert(m, 0, row_numbers, axis=1)
+
+    def build_data(spec: PlotSpec) -> PlotData:
+        data = dataset[spec.path]
+        return PlotData(
+            x=eval_expr(spec.xexpr, data),
+            y=eval_expr(spec.yexpr, data),
+        )
+
+    paths = {s.path for s in specs}
+    dataset = {p: load_file(p) for p in paths}
+
+    return [build_data(spec) for spec in specs]
+
+
 def main():
-    plots = parse_args(" ".join(sys.argv[1:]))
-    for p in plots:
-        print(p)
-        plt.plot(p.x, p.y, label=p.path)
+    specs = parse_specs(sys.argv[1:])
+    datas = load_datas(specs)
+    for spec, data in zip(specs, datas):
+        plt.plot(data.x, data.y, label=f"{spec.path}:{spec.yexpr}")
     plt.legend()
     plt.show()
 
