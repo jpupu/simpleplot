@@ -30,32 +30,32 @@ def test_tokenizer_passes_lonely_comma():
 
 
 def test_parsespecs_gets_specified_filenames():
-    specs = parse_specs("file foo, file bar, file baz")
+    _, specs = parse_specs("file foo, file bar, file baz")
     assert ["foo", "bar", "baz"] == [s.path for s in specs]
 
 
 def test_parsespecs_uses_previous_filename_when_not_specified():
-    specs = parse_specs("file foo, , , file baz")
+    _, specs = parse_specs("file foo, , , file baz")
     assert ["foo", "foo", "foo", "baz"] == [s.path for s in specs]
 
 
 def test_parsespecs_get_specified_yexprs():
-    specs = parse_specs("y sin(c1*0.5)+2")
+    _, specs = parse_specs("y sin(c1*0.5)+2")
     assert ["sin(c1*0.5)+2"] == [s.yexpr for s in specs]
 
 
 def test_parsespecs_uses_column_one_when_yexpr_not_specified():
-    specs = parse_specs("y some,")
+    _, specs = parse_specs("y some,")
     assert ["some", "c1"] == [s.yexpr for s in specs]
 
 
 def test_parsespecs_get_specified_xexprs():
-    specs = parse_specs("x sin(c1*0.5)+2")
+    _, specs = parse_specs("x sin(c1*0.5)+2")
     assert ["sin(c1*0.5)+2"] == [s.xexpr for s in specs]
 
 
 def test_parsespecs_uses_column_zero_when_xexpr_not_specified():
-    specs = parse_specs("x some,")
+    _, specs = parse_specs("x some,")
     assert ["some", "c0"] == [s.xexpr for s in specs]
 
 
@@ -93,7 +93,7 @@ def test_evalexpr_broadcasts_scalar_value(data):
 
 
 def test_loaddatas_loads_data_from_files():
-    specs = parse_specs("file testdata/tens.txt, file testdata/hundreds.txt")
+    _, specs = parse_specs("file testdata/tens.txt, file testdata/hundreds.txt")
     datas = load_datas(specs)
     assert [0, 1, 2, 3] == list(datas[0].x)
     assert [0, 10, 20, 30] == list(datas[0].y)
@@ -103,14 +103,14 @@ def test_loaddatas_loads_data_from_files():
 
 
 def test_loaddatas_applies_xexpr():
-    specs = parse_specs("file testdata/tens.txt x c0*2")
+    _, specs = parse_specs("file testdata/tens.txt x c0*2")
     datas = load_datas(specs)
     assert [0, 2, 4, 6] == list(datas[0].x)
     assert [0, 10, 20, 30] == list(datas[0].y)
 
 
 def test_loaddatas_applies_yexpr():
-    specs = parse_specs("file testdata/tens.txt y c1*2")
+    _, specs = parse_specs("file testdata/tens.txt y c1*2")
     datas = load_datas(specs)
     assert [0, 1, 2, 3] == list(datas[0].x)
     assert [0, 20, 40, 60] == list(datas[0].y)

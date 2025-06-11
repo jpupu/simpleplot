@@ -1,6 +1,7 @@
 import dataclasses
 from dataclasses import dataclass, field
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
 import sys
 from typing import Iterator
@@ -25,6 +26,11 @@ def tokenize(cmdline: str | list[str]) -> Iterator[str]:
 
 
 @dataclass
+class GraphSpec:
+    xticks: float | list[float] | None = None
+
+
+@dataclass
 class PlotSpec:
     path: str = ""
     xexpr: str = "c0"
@@ -40,9 +46,10 @@ class PlotData:
     y: np.ndarray = field(default_factory=lambda: np.array([]))
 
 
-def parse_specs(cmdline: str | list[str]) -> list[PlotData]:
+def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
     if type(cmdline) == str:
         cmdline = cmdline.split()
+    graph = GraphSpec()
     plots: list[PlotSpec] = []
 
     def add_plot():
@@ -72,13 +79,19 @@ def parse_specs(cmdline: str | list[str]) -> list[PlotData]:
             spec.marker = next(tokens)
         elif token == "label":
             spec.label = next(tokens)
+        elif token == "--xticks":
+            s = next(tokens)
+            if "," in s:
+                graph.xticks = [float(x) for x in s.split(",")]
+            else:
+                graph.xticks = float(s)
         else:
             print(f"Invalid keyword {repr(token)}", file=sys.stderr)
             sys.exit(1)
 
     plots.append(spec)
 
-    return plots
+    return graph, plots
 
 
 def eval_expr(expr: str, data: np.ndarray) -> np.ndarray:
@@ -115,18 +128,33 @@ def load_datas(specs: list[PlotSpec]) -> list[PlotData]:
     return [build_data(spec) for spec in specs]
 
 
+class AutoMultipleLocator(ticker.MultipleLocator):
+    def __call__(self):
+        ticks = super().__call__()
+        while len(ticks) > self.axis.get_tick_space():
+            ticks = ticks[::2]
+        return ticks
+
+
 def main():
-    specs = parse_specs(sys.argv[1:])
+    graph, specs = parse_specs(sys.argv[1:])
     datas = load_datas(specs)
+
+    ax = plt.subplot()
     for spec, data in zip(specs, datas):
-        plt.plot(
+        ax.plot(
             data.x,
             data.y,
             label=f"{spec.path}:{spec.yexpr}" if spec.label is None else spec.label,
             ls=spec.linestyle,
             marker=spec.marker,
         )
-    plt.legend()
+    if graph.xticks is not None:
+        if type(graph.xticks) == list:
+            ax.set_xticks(graph.xticks)
+        else:
+            ax.xaxis.set_major_locator(AutoMultipleLocator(base=graph.xticks))
+    ax.legend()
     plt.show()
 
 
