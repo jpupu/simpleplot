@@ -52,15 +52,7 @@ def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
     graph = GraphSpec()
     plots: list[PlotSpec] = []
 
-    def add_plot():
-        plot = PlotData(
-            path=path,
-            x=dataset[path][:, 0],
-            y=eval(yexpr, dict(data=dataset[path], col=lambda c: dataset[path][:, c])),
-        )
-        plots.append(plot)
-
-    spec = PlotSpec()
+    spec = dataclasses.replace(PlotSpec(), path="stdin")
 
     tokens = tokenize(cmdline)
     for token in tokens:
@@ -111,6 +103,8 @@ def eval_expr(expr: str, data: np.ndarray) -> np.ndarray:
 
 def load_datas(specs: list[PlotSpec]) -> list[PlotData]:
     def load_file(path: str) -> np.ndarray:
+        if path == "stdin":
+            path = sys.stdin
         m = np.loadtxt(path, ndmin=2)
         row_numbers = np.arange(m.shape[0])
         return np.insert(m, 0, row_numbers, axis=1)
