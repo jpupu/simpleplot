@@ -150,6 +150,7 @@ class AutoMultipleLocator(ticker.MultipleLocator):
 
 def main():
     graph, specs = parse_specs(sys.argv[1:])
+
     datas = load_datas(specs)
 
     ax = plt.subplot()
@@ -173,4 +174,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except FileNotFoundError as e:
+        print(f"error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print(f"interrupted", file=sys.stderr)
