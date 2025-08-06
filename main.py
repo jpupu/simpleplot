@@ -28,6 +28,8 @@ def tokenize(cmdline: str | list[str]) -> Iterator[str]:
 @dataclass
 class GraphSpec:
     xticks: float | list[float] | None = None
+    xlim: (float | None, float | None) = (None, None)
+    ylim: (float | None, float | None) = (None, None)
 
 
 @dataclass
@@ -44,6 +46,12 @@ class PlotSpec:
 class PlotData:
     x: np.ndarray = field(default_factory=lambda: np.array([]))
     y: np.ndarray = field(default_factory=lambda: np.array([]))
+
+
+def parse_float_or_none(s: str) -> float | None:
+    if s == "-" or s == "":
+        return None
+    return float(s)
 
 
 def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
@@ -77,6 +85,16 @@ def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
                 graph.xticks = [float(x) for x in s.split(",")]
             else:
                 graph.xticks = float(s)
+        elif token == "--xlim":
+            graph.xlim = (
+                parse_float_or_none(next(tokens)),
+                parse_float_or_none(next(tokens)),
+            )
+        elif token == "--ylim":
+            graph.ylim = (
+                parse_float_or_none(next(tokens)),
+                parse_float_or_none(next(tokens)),
+            )
         else:
             print(f"Invalid keyword {repr(token)}", file=sys.stderr)
             sys.exit(1)
@@ -148,6 +166,8 @@ def main():
             ax.set_xticks(graph.xticks)
         else:
             ax.xaxis.set_major_locator(AutoMultipleLocator(base=graph.xticks))
+    ax.set_xlim(*graph.xlim)
+    ax.set_ylim(*graph.ylim)
     ax.legend()
     plt.show()
 
