@@ -45,8 +45,8 @@ def test_parsespecs_get_specified_yexprs():
 
 
 def test_parsespecs_uses_column_one_when_yexpr_not_specified():
-    _, specs = parse_specs("y some,")
-    assert ["some", "c1"] == [s.yexpr for s in specs]
+    _, specs = parse_specs("")
+    assert ["c1"] == [s.yexpr for s in specs]
 
 
 def test_parsespecs_get_specified_xexprs():
@@ -55,8 +55,26 @@ def test_parsespecs_get_specified_xexprs():
 
 
 def test_parsespecs_uses_column_zero_when_xexpr_not_specified():
-    _, specs = parse_specs("x some,")
-    assert ["some", "c0"] == [s.xexpr for s in specs]
+    _, specs = parse_specs("")
+    assert ["c0"] == [s.xexpr for s in specs]
+
+
+def test_parsespecs_plot_new_plot_resets_only_specified_fields():
+    _, specs = parse_specs("--reset-plot x,marker x 100 y 200 ls : marker o,")
+    assert "c0" == specs[1].xexpr
+    assert "200" == specs[1].yexpr
+    assert ":" == specs[1].linestyle
+    assert "" == specs[1].marker
+
+
+def test_parsespecs_plot_new_file_resets_only_specified_fields():
+    _, specs = parse_specs(
+        "--reset-file x,marker x 100 y 200 ls : marker o, file other.txt"
+    )
+    assert "c0" == specs[1].xexpr
+    assert "200" == specs[1].yexpr
+    assert ":" == specs[1].linestyle
+    assert "" == specs[1].marker
 
 
 @pytest.fixture

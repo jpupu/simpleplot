@@ -59,6 +59,8 @@ def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
         cmdline = cmdline.split()
     graph = GraphSpec()
     plots: list[PlotSpec] = []
+    reset_plot: list[str] = []
+    reset_file: list[str] = []
 
     spec = dataclasses.replace(PlotSpec(), path="stdin")
 
@@ -66,8 +68,13 @@ def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
     for token in tokens:
         if token == ",":
             plots.append(spec)
-            spec = dataclasses.replace(spec, xexpr="c0", yexpr="c1")
+            spec = dataclasses.replace(
+                spec, **dict((key, getattr(PlotSpec, key)) for key in reset_plot)
+            )
         elif token == "file":
+            spec = dataclasses.replace(
+                spec, **dict((key, getattr(PlotSpec, key)) for key in reset_file)
+            )
             spec.path = next(tokens)
         elif token == "x":
             spec.xexpr = next(tokens)
@@ -95,6 +102,16 @@ def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
                 parse_float_or_none(next(tokens)),
                 parse_float_or_none(next(tokens)),
             )
+        elif token == "--reset-plot":
+            rlist = next(tokens)
+            for k, v in [("x", "xexpr"), ("y", "yexpr"), ("ls", "linestyle")]:
+                rlist = rlist.replace(k, v)
+            reset_plot = rlist.split(",")
+        elif token == "--reset-file":
+            rlist = next(tokens)
+            for k, v in [("x", "xexpr"), ("y", "yexpr"), ("ls", "linestyle")]:
+                rlist = rlist.replace(k, v)
+            reset_file = rlist.split(",")
         else:
             print(f"Invalid keyword {repr(token)}", file=sys.stderr)
             sys.exit(1)
