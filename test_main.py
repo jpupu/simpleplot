@@ -1,80 +1,136 @@
-from main import eval_expr, parse_specs, tokenize, load_datas
 import numpy as np
 import pytest
 
+from main import (
+    CommandLineError,
+    PlotSpec,
+    build_plots,
+    eval_expr,
+    load_datas,
+    parse_cmdline,
+    tokenize,
+)
+
 
 def test_tokenizer_is_passthru_when_no_commas():
-    assert ["foo", "bar", "path/file.txt", "with space"] == list(
-        tokenize(["foo", "bar", "path/file.txt", "with space"])
-    )
+    assert list(tokenize(["foo", "bar", "path/file.txt", "with space"])) == [
+        "foo",
+        "bar",
+        "path/file.txt",
+        "with space",
+    ]
 
 
 def test_tokenizer_splits_comma_at_end_of_word():
-    assert ["foo", ","] == list(tokenize(["foo,"]))
-
-
-def test_tokenizer_splits_comma_at_end_of_word():
-    assert ["foo", ","] == list(tokenize(["foo,"]))
+    assert list(tokenize(["foo,"])) == ["foo", ","]
 
 
 def test_tokenizer_splits_comma_at_start_of_word():
-    assert [",", "foo"] == list(tokenize([",foo"]))
+    assert list(tokenize([",foo"])) == [",", "foo"]
 
 
 def test_tokenizer_keeps_comma_inside_word():
-    assert ["foo, bar"] == list(tokenize(["foo, bar"]))
+    assert list(tokenize(["foo, bar"])) == ["foo, bar"]
 
 
 def test_tokenizer_passes_lonely_comma():
-    assert [","] == list(tokenize([","]))
+    assert list(tokenize([","])) == [","]
 
 
-def test_parsespecs_gets_specified_filenames():
-    _, specs = parse_specs("file foo, file bar, file baz")
-    assert ["foo", "bar", "baz"] == [s.path for s in specs]
+def test_parse_cmdline_path():
+    plots, graph = parse_cmdline("path foo")
+    assert plots[0].path == "foo"
 
 
-def test_parsespecs_uses_previous_filename_when_not_specified():
-    _, specs = parse_specs("file foo, , , file baz")
-    assert ["foo", "foo", "foo", "baz"] == [s.path for s in specs]
+def test_parse_cmdline_xexpr():
+    plots, graph = parse_cmdline("xexpr c1*2")
+    assert plots[0].xexpr == "c1*2"
 
 
-def test_parsespecs_get_specified_yexprs():
-    _, specs = parse_specs("y sin(c1*0.5)+2")
-    assert ["sin(c1*0.5)+2"] == [s.yexpr for s in specs]
+def test_parse_cmdline_yexpr():
+    plots, graph = parse_cmdline("yexpr c1*2")
+    assert plots[0].yexpr == "c1*2"
 
 
-def test_parsespecs_uses_column_one_when_yexpr_not_specified():
-    _, specs = parse_specs("")
-    assert ["c1"] == [s.yexpr for s in specs]
+def test_parse_cmdline_linestyle():
+    plots, graph = parse_cmdline("linestyle --")
+    assert plots[0].linestyle == "--"
 
 
-def test_parsespecs_get_specified_xexprs():
-    _, specs = parse_specs("x sin(c1*0.5)+2")
-    assert ["sin(c1*0.5)+2"] == [s.xexpr for s in specs]
+def test_parse_cmdline_marker():
+    plots, graph = parse_cmdline("marker +")
+    assert plots[0].marker == "+"
 
 
-def test_parsespecs_uses_column_zero_when_xexpr_not_specified():
-    _, specs = parse_specs("")
-    assert ["c0"] == [s.xexpr for s in specs]
+def test_parse_cmdline_label():
+    plots, graph = parse_cmdline("label Some_curve")
+    assert plots[0].label == "Some_curve"
 
 
-def test_parsespecs_plot_new_plot_resets_only_specified_fields():
-    _, specs = parse_specs("--reset-plot x,marker x 100 y 200 ls : marker o,")
-    assert "c0" == specs[1].xexpr
-    assert "200" == specs[1].yexpr
-    assert ":" == specs[1].linestyle
-    assert "" == specs[1].marker
+def test_parse_cmdline_xticks():
+    _, graph = parse_cmdline("--xticks 5")
+    assert graph.xticks == 5
+    _, graph = parse_cmdline("--xticks 5.5,11")
+    assert graph.xticks == [5.5, 11]
 
 
-def test_parsespecs_plot_new_file_resets_only_specified_fields():
-    _, specs = parse_specs(
-        "--reset-file x,marker x 100 y 200 ls : marker o, file other.txt"
-    )
-    assert "c0" == specs[1].xexpr
-    assert "200" == specs[1].yexpr
-    assert ":" == specs[1].linestyle
-    assert "" == specs[1].marker
+def test_parse_cmdline_xlim():
+    _, graph = parse_cmdline("--xlim 10 100")
+    assert graph.xlim == (10, 100)
+    _, graph = parse_cmdline("--xlim - 100")
+    assert graph.xlim == (None, 100)
+    _, graph = parse_cmdline("--xlim 10 -")
+    assert graph.xlim == (10, None)
+    _, graph = parse_cmdline("--xlim - -")
+    assert graph.xlim == (None, None)
+
+
+def test_parse_cmdline_ylim():
+    _, graph = parse_cmdline("--ylim 10 100")
+    assert graph.ylim == (10, 100)
+    _, graph = parse_cmdline("--ylim - 100")
+    assert graph.ylim == (None, 100)
+    _, graph = parse_cmdline("--ylim 10 -")
+    assert graph.ylim == (10, None)
+    _, graph = parse_cmdline("--ylim - -")
+    assert graph.ylim == (None, None)
+
+
+def test_parse_cmdline_error():
+    with pytest.raises(CommandLineError):
+        parse_cmdline("nosuchthing")
+
+
+def test_parse_cmdline_multiple_plots():
+    plots, _ = parse_cmdline("xexpr c1, xexpr c3")
+    assert len(plots) == 2
+    assert plots[0].xexpr == "c1"
+    assert plots[1].xexpr == "c3"
+
+
+def test_parse_cmdline_multiple_plots_empty_plots_are_ignored():
+    plots, _ = parse_cmdline("xexpr c1, , xexpr c3,")
+    assert len(plots) == 2
+    assert plots[0].xexpr == "c1"
+    assert plots[1].xexpr == "c3"
+
+
+def test_build_plots_first_plot_inherits_defaults():
+    oplots = build_plots([PlotSpec()])
+    assert oplots == [PlotSpec.default()]
+
+
+def test_build_plots_unset_values_are_inherited():
+    oplots = build_plots([PlotSpec(xexpr="c2")])
+    assert oplots == [PlotSpec.default().replace(xexpr="c2")]
+
+
+def test_build_plots_inherits_from_previous_plot():
+    oplots = build_plots([PlotSpec(xexpr="c2"), PlotSpec(yexpr="c3")])
+    assert oplots == [
+        PlotSpec.default().replace(xexpr="c2"),
+        PlotSpec.default().replace(xexpr="c2", yexpr="c3"),
+    ]
 
 
 @pytest.fixture
@@ -83,23 +139,23 @@ def data():
 
 
 def test_evalexpr_exposes_dataframe_as_data(data):
-    assert [0, 10, 20] == list(eval_expr("data[:,1]", data))
+    assert list(eval_expr("data[:,1]", data)) == [0, 10, 20]
 
 
 def test_evalexpr_exposes_column_zero_as_i(data):
-    assert [0, 1, 2] == list(eval_expr("i", data))
+    assert list(eval_expr("i", data)) == [0, 1, 2]
 
 
 def test_evalexpr_exposes_columns_as_cN(data):
-    assert [0, 1, 2] == list(eval_expr("c0", data))
-    assert [0, 10, 20] == list(eval_expr("c1", data))
-    assert [0, 100, 200] == list(eval_expr("c2", data))
+    assert list(eval_expr("c0", data)) == [0, 1, 2]
+    assert list(eval_expr("c1", data)) == [0, 10, 20]
+    assert list(eval_expr("c2", data)) == [0, 100, 200]
 
 
 def test_evalexpr_exposes_columns_as_function_col_N(data):
-    assert [0, 1, 2] == list(eval_expr("col(0)", data))
-    assert [0, 10, 20] == list(eval_expr("col(1)", data))
-    assert [0, 100, 200] == list(eval_expr("col(1+1)", data))
+    assert list(eval_expr("col(0)", data)) == [0, 1, 2]
+    assert list(eval_expr("col(1)", data)) == [0, 10, 20]
+    assert list(eval_expr("col(1+1)", data)) == [0, 100, 200]
 
 
 def test_evalexpr_exposes_numpy_math_functions(data):
@@ -107,28 +163,38 @@ def test_evalexpr_exposes_numpy_math_functions(data):
 
 
 def test_evalexpr_broadcasts_scalar_value(data):
-    assert [42, 42, 42] == list(eval_expr("42", data))
+    assert list(eval_expr("42", data)) == [42, 42, 42]
 
 
 def test_loaddatas_loads_data_from_files():
-    _, specs = parse_specs("file testdata/tens.txt, file testdata/hundreds.txt")
-    datas = load_datas(specs)
-    assert [0, 1, 2, 3] == list(datas[0].x)
-    assert [0, 10, 20, 30] == list(datas[0].y)
+    datas = load_datas(
+        [
+            PlotSpec(path="testdata/tens.txt", xexpr="c0", yexpr="c1"),
+            PlotSpec(path="testdata/hundreds.txt", xexpr="c0", yexpr="c1"),
+        ]
+    )
+    assert list(datas[0].x) == [0, 1, 2, 3]
+    assert list(datas[0].y) == [0, 10, 20, 30]
 
-    assert [0, 1, 2, 3] == list(datas[1].x)
-    assert [0, 100, 200, 300] == list(datas[1].y)
+    assert list(datas[1].x) == [0, 1, 2, 3]
+    assert list(datas[1].y) == [0, 100, 200, 300]
 
 
 def test_loaddatas_applies_xexpr():
-    _, specs = parse_specs("file testdata/tens.txt x c0*2")
-    datas = load_datas(specs)
-    assert [0, 2, 4, 6] == list(datas[0].x)
-    assert [0, 10, 20, 30] == list(datas[0].y)
+    datas = load_datas(
+        [
+            PlotSpec(path="testdata/tens.txt", xexpr="c0*2", yexpr="c1"),
+        ]
+    )
+    assert list(datas[0].x) == [0, 2, 4, 6]
+    assert list(datas[0].y) == [0, 10, 20, 30]
 
 
 def test_loaddatas_applies_yexpr():
-    _, specs = parse_specs("file testdata/tens.txt y c1*2")
-    datas = load_datas(specs)
-    assert [0, 1, 2, 3] == list(datas[0].x)
-    assert [0, 20, 40, 60] == list(datas[0].y)
+    datas = load_datas(
+        [
+            PlotSpec(path="testdata/tens.txt", xexpr="c0", yexpr="c1*2"),
+        ]
+    )
+    assert list(datas[0].x) == [0, 1, 2, 3]
+    assert list(datas[0].y) == [0, 20, 40, 60]

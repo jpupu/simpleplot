@@ -1,14 +1,19 @@
 import dataclasses
+import sys
+from collections.abc import Iterator
 from dataclasses import dataclass, field
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-import sys
-from typing import Iterator
+
+
+class CommandLineError(RuntimeError):
+    pass
 
 
 def tokenize(cmdline: str | list[str]) -> Iterator[str]:
-    if type(cmdline) == str:
+    if type(cmdline) is str:
         cmdline = cmdline.split()
 
     for arg in cmdline:
@@ -34,12 +39,51 @@ class GraphSpec:
 
 @dataclass
 class PlotSpec:
-    path: str = ""
-    xexpr: str = "c0"
-    yexpr: str = "c1"
-    linestyle: str = "-"
-    marker: str = ""
+    """PlotSpec is a plot spec"""
+
+    path: str | None = None
+    xexpr: str | None = None
+    yexpr: str | None = None
+    linestyle: str | None = None
+    marker: str | None = None
     label: str | None = None
+
+    @classmethod
+    def default(cls) -> "PlotSpec":
+        return PlotSpec(
+            path="-", xexpr="c0", yexpr="c1", linestyle="-", marker="", label=""
+        )
+
+    def set(self, name: str, value: str) -> None:
+        setattr(self, name, value)
+
+    def setdefault(self, name: str, value: str) -> None:
+        if getattr(self, name) is None:
+            setattr(self, name, value)
+
+    @classmethod
+    def is_field(cls, name: str) -> bool:
+        return name in cls.__dict__
+
+    def update(self, other: "PlotSpec"):
+        for f in dataclasses.fields(PlotSpec):
+            o = getattr(other, f.name)
+            if o is not None:
+                setattr(self, f.name, o)
+
+    def replace(self, **kwargs) -> "PlotSpec":
+        new = self.copy()
+        for k, v in kwargs.items():
+            new.set(k, v)
+        return new
+
+    def copy(self) -> "PlotSpec":
+        p = PlotSpec()
+        p.update(self)
+        return p
+
+    def is_empty(self) -> bool:
+        return all(x is None for x in dataclasses.astuple(self))
 
 
 @dataclass
@@ -54,38 +98,24 @@ def parse_float_or_none(s: str) -> float | None:
     return float(s)
 
 
-def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
-    if type(cmdline) == str:
-        cmdline = cmdline.split()
+def parse_cmdline(cmdline: str | list[str]) -> tuple[list[PlotSpec], GraphSpec]:
+    """Parses command line to sparse plot specs and graph spec."""
     graph = GraphSpec()
     plots: list[PlotSpec] = []
-    reset_plot: list[str] = []
-    reset_file: list[str] = []
-
-    spec = dataclasses.replace(PlotSpec(), path="stdin")
+    plot: PlotSpec = PlotSpec()
 
     tokens = tokenize(cmdline)
     for token in tokens:
-        if token == ",":
-            plots.append(spec)
-            spec = dataclasses.replace(
-                spec, **dict((key, getattr(PlotSpec, key)) for key in reset_plot)
-            )
-        elif token == "file":
-            spec = dataclasses.replace(
-                spec, **dict((key, getattr(PlotSpec, key)) for key in reset_file)
-            )
-            spec.path = next(tokens)
-        elif token == "x":
-            spec.xexpr = next(tokens)
-        elif token == "y":
-            spec.yexpr = next(tokens)
-        elif token == "ls":
-            spec.linestyle = next(tokens)
-        elif token == "marker":
-            spec.marker = next(tokens)
-        elif token == "label":
-            spec.label = next(tokens)
+        if token in (",", "plot"):
+            plots.append(plot)
+            plot = PlotSpec()
+        elif PlotSpec.is_field(token):
+            plot.set(token, next(tokens))
+        # elif token == "scatter":
+        #     plot.setdefault("xexpr", "c1")
+        #     plot.setdefault("yexpr", "c2")
+        #     plot.setdefault("linestyle", "")
+        #     plot.setdefault("marker", "o")
         elif token == "--xticks":
             s = next(tokens)
             if "," in s:
@@ -102,23 +132,27 @@ def parse_specs(cmdline: str | list[str]) -> tuple[GraphSpec, list[PlotSpec]]:
                 parse_float_or_none(next(tokens)),
                 parse_float_or_none(next(tokens)),
             )
-        elif token == "--reset-plot":
-            rlist = next(tokens)
-            for k, v in [("x", "xexpr"), ("y", "yexpr"), ("ls", "linestyle")]:
-                rlist = rlist.replace(k, v)
-            reset_plot = rlist.split(",")
-        elif token == "--reset-file":
-            rlist = next(tokens)
-            for k, v in [("x", "xexpr"), ("y", "yexpr"), ("ls", "linestyle")]:
-                rlist = rlist.replace(k, v)
-            reset_file = rlist.split(",")
         else:
-            print(f"Invalid keyword {repr(token)}", file=sys.stderr)
-            sys.exit(1)
+            raise CommandLineError(f"Invalid token {token!r}")
 
-    plots.append(spec)
+    if plot:
+        plots.append(plot)
 
-    return graph, plots
+    plots = [p for p in plots if not p.is_empty()]
+
+    return plots, graph
+
+
+def build_plots(attrlist: list[PlotSpec]) -> list[PlotSpec]:
+    """Build concrete PlotSpecs from sparse specs."""
+    plots: list[PlotSpec] = []
+    plot = PlotSpec.default()
+
+    for attrs in attrlist:
+        plot.update(attrs)
+        plots.append(plot.copy())
+
+    return plots
 
 
 def eval_expr(expr: str, data: np.ndarray) -> np.ndarray:
@@ -166,12 +200,13 @@ class AutoMultipleLocator(ticker.MultipleLocator):
 
 
 def main():
-    graph, specs = parse_specs(sys.argv[1:])
+    specs, graph = parse_cmdline(sys.argv[1:])
+    specs = build_plots(specs)
 
     datas = load_datas(specs)
 
     ax = plt.subplot()
-    for spec, data in zip(specs, datas):
+    for spec, data in zip(specs, datas, strict=True):
         ax.plot(
             data.x,
             data.y,
@@ -180,7 +215,7 @@ def main():
             marker=spec.marker,
         )
     if graph.xticks is not None:
-        if type(graph.xticks) == list:
+        if type(graph.xticks) is list:
             ax.set_xticks(graph.xticks)
         else:
             ax.xaxis.set_major_locator(AutoMultipleLocator(base=graph.xticks))
@@ -196,5 +231,8 @@ if __name__ == "__main__":
     except FileNotFoundError as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(1)
+    except CommandLineError as e:
+        print(f"error: {e}", file=sys.stderr)
+        sys.exit(1)
     except KeyboardInterrupt:
-        print(f"interrupted", file=sys.stderr)
+        print("interrupted", file=sys.stderr)
