@@ -62,6 +62,11 @@ def test_parse_cmdline_marker():
     assert plots[0].marker == "+"
 
 
+def test_parse_cmdline_color():
+    plots, graph = parse_cmdline("color orange")
+    assert plots[0].color == "orange"
+
+
 def test_parse_cmdline_label():
     plots, graph = parse_cmdline("label Some_curve")
     assert plots[0].label == "Some_curve"

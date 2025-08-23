@@ -46,12 +46,19 @@ class PlotSpec:
     yexpr: str | None = None
     linestyle: str | None = None
     marker: str | None = None
+    color: str | None = None
     label: str | None = None
 
     @classmethod
     def default(cls) -> "PlotSpec":
         return PlotSpec(
-            path="-", xexpr="c0", yexpr="c1", linestyle="-", marker="", label=""
+            path="-",
+            xexpr="c0",
+            yexpr="c1",
+            linestyle="-",
+            marker="",
+            color=None,
+            label="",
         )
 
     def set(self, name: str, value: str) -> None:
@@ -213,6 +220,7 @@ def main():
             label=f"{spec.path}:{spec.yexpr}" if spec.label is None else spec.label,
             ls=spec.linestyle,
             marker=spec.marker,
+            color=spec.color,
         )
     if graph.xticks is not None:
         if type(graph.xticks) is list:
