@@ -179,7 +179,7 @@ def parse_cmdline(cmdline: str | list[str]) -> tuple[list[PlotSpec], GraphSpec]:
                 parse_float_or_none(next(tokens)),
             )
         else:
-            raise CommandLineError(f"Invalid token {token!r}")
+            plot.path = token
 
     if plot:
         plots.append(plot)

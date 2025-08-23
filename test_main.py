@@ -127,9 +127,9 @@ def test_parse_cmdline_ylim():
     assert graph.ylim == (None, None)
 
 
-def test_parse_cmdline_error():
-    with pytest.raises(CommandLineError):
-        parse_cmdline("nosuchthing")
+def test_parse_cmdline_naked_path():
+    plots, _ = parse_cmdline("nosuchthing")
+    assert plots[0].path == "nosuchthing"
 
 
 def test_parse_cmdline_multiple_plots():
