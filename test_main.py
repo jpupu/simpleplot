@@ -127,6 +127,12 @@ def test_parse_cmdline_ylim():
     assert graph.ylim == (None, None)
 
 
+def test_parse_cmdline_naked_fmt():
+    plots, _ = parse_cmdline("o--")
+    assert plots[0].marker == "o"
+    assert plots[0].linestyle == "--"
+
+
 def test_parse_cmdline_naked_path():
     plots, _ = parse_cmdline("nosuchthing")
     assert plots[0].path == "nosuchthing"

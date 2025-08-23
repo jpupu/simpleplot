@@ -178,6 +178,8 @@ def parse_cmdline(cmdline: str | list[str]) -> tuple[list[PlotSpec], GraphSpec]:
                 parse_float_or_none(next(tokens)),
                 parse_float_or_none(next(tokens)),
             )
+        elif mlc := parse_fmt(token):
+            plot.marker, plot.linestyle, plot.color = mlc
         else:
             plot.path = token
 
