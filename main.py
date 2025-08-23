@@ -105,6 +105,39 @@ def parse_float_or_none(s: str) -> float | None:
     return float(s)
 
 
+MARKER_STYLES = ".,ov^<>12348spP*hH+xXDd|_"
+LINE_STYLES = ["--", "-.", "-", ":"]
+COLOR_STYLES = list("bgrcmykwa") + [f"C{n}" for n in range(10)]
+
+
+def parse_fmt(fmt: str) -> tuple[str | None, str | None, str | None] | None:
+    # See https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html
+    marker = ""
+    line = ""
+    color = None
+
+    for m in MARKER_STYLES:
+        if fmt.startswith(m):
+            marker = m
+            fmt = fmt[len(m) :]
+            break
+    for ln in LINE_STYLES:
+        if fmt.startswith(ln):
+            line = ln
+            fmt = fmt[len(ln) :]
+            break
+    for c in COLOR_STYLES:
+        if fmt.startswith(c):
+            color = c
+            fmt = fmt[len(c) :]
+            break
+
+    if fmt:
+        return None
+
+    return marker, line, color
+
+
 def parse_cmdline(cmdline: str | list[str]) -> tuple[list[PlotSpec], GraphSpec]:
     """Parses command line to sparse plot specs and graph spec."""
     graph = GraphSpec()
@@ -118,6 +151,12 @@ def parse_cmdline(cmdline: str | list[str]) -> tuple[list[PlotSpec], GraphSpec]:
             plot = PlotSpec()
         elif PlotSpec.is_field(token):
             plot.set(token, next(tokens))
+        elif token == "fmt":
+            fmt = next(tokens)
+            mlc = parse_fmt(fmt)
+            if mlc is None:
+                raise CommandLineError(f"Invalid format: {fmt}")
+            plot.marker, plot.linestyle, plot.color = mlc
         # elif token == "scatter":
         #     plot.setdefault("xexpr", "c1")
         #     plot.setdefault("yexpr", "c2")

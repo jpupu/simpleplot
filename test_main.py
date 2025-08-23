@@ -8,6 +8,7 @@ from main import (
     eval_expr,
     load_datas,
     parse_cmdline,
+    parse_fmt,
     tokenize,
 )
 
@@ -35,6 +36,18 @@ def test_tokenizer_keeps_comma_inside_word():
 
 def test_tokenizer_passes_lonely_comma():
     assert list(tokenize([","])) == [","]
+
+
+def test_parse_fmt():
+    assert parse_fmt("") == ("", "", None)
+    assert parse_fmt("o") == ("o", "", None)
+    assert parse_fmt("--") == ("", "--", None)
+    assert parse_fmt("c") == ("", "", "c")
+    assert parse_fmt("C2") == ("", "", "C2")
+    assert parse_fmt("o-.") == ("o", "-.", None)
+    assert parse_fmt("-.C2") == ("", "-.", "C2")
+    assert parse_fmt("o-.C2") == ("o", "-.", "C2")
+    assert parse_fmt("greenstuff") is None
 
 
 def test_parse_cmdline_path():
@@ -70,6 +83,19 @@ def test_parse_cmdline_color():
 def test_parse_cmdline_label():
     plots, graph = parse_cmdline("label Some_curve")
     assert plots[0].label == "Some_curve"
+
+
+def test_parse_cmdline_fmt():
+    plots, _ = parse_cmdline("fmt o--")
+    assert plots[0].marker == "o"
+    assert plots[0].linestyle == "--"
+
+    plots, _ = parse_cmdline("linestyle -- fmt o")
+    assert plots[0].marker == "o"
+    assert plots[0].linestyle == ""
+
+    with pytest.raises(CommandLineError):
+        parse_cmdline("fmt badly")
 
 
 def test_parse_cmdline_xticks():
