@@ -235,3 +235,35 @@ def test_loaddatas_applies_yexpr():
     )
     assert list(datas[0].x) == [0, 1, 2, 3]
     assert list(datas[0].y) == [0, 20, 40, 60]
+
+
+def test_loaddatas_applies_xmul_and_xbias():
+    datas = load_datas(
+        [
+            PlotSpec(
+                path="testdata/tens.txt",
+                xexpr="c0+2",
+                xmul="5+5",
+                xbias="1+2",
+                yexpr="c1",
+            ),
+        ]
+    )
+    assert list(datas[0].x) == list((np.array([0, 1, 2, 3]) + 2) * 10 + 3)
+    assert list(datas[0].y) == [0, 10, 20, 30]
+
+
+def test_loaddatas_applies_ymul_and_ybias():
+    datas = load_datas(
+        [
+            PlotSpec(
+                path="testdata/tens.txt",
+                xexpr="c0",
+                yexpr="c1+2",
+                ymul="5+5",
+                ybias="1+2",
+            ),
+        ]
+    )
+    assert list(datas[0].x) == [0, 1, 2, 3]
+    assert list(datas[0].y) == list((np.array([0, 10, 20, 30]) + 2) * 10 + 3)

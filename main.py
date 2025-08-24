@@ -43,7 +43,11 @@ class PlotSpec:
 
     path: str | None = None
     xexpr: str | None = None
+    xbias: str | None = None
+    xmul: str | None = None
     yexpr: str | None = None
+    ybias: str | None = None
+    ymul: str | None = None
     linestyle: str | None = None
     marker: str | None = None
     color: str | None = None
@@ -54,7 +58,11 @@ class PlotSpec:
         return PlotSpec(
             path="-",
             xexpr="c0",
+            xbias=None,
+            xmul=None,
             yexpr="c1",
+            ybias=None,
+            ymul=None,
             linestyle="-",
             marker="",
             color=None,
@@ -228,9 +236,15 @@ def load_datas(specs: list[PlotSpec]) -> list[PlotData]:
 
     def build_data(spec: PlotSpec) -> PlotData:
         data = dataset[spec.path]
+        x = eval_expr(spec.xexpr, data)
+        xmul = eval_expr(spec.xmul or "1", data)
+        xbias = eval_expr(spec.xbias or "0", data)
+        y = eval_expr(spec.yexpr, data)
+        ymul = eval_expr(spec.ymul or "1", data)
+        ybias = eval_expr(spec.ybias or "0", data)
         return PlotData(
-            x=eval_expr(spec.xexpr, data),
-            y=eval_expr(spec.yexpr, data),
+            x=x * xmul + xbias,
+            y=y * ymul + ybias,
         )
 
     paths = {s.path for s in specs}
