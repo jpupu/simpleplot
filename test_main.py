@@ -105,6 +105,13 @@ def test_parse_cmdline_xticks():
     assert graph.xticks == [5.5, 11]
 
 
+def test_parse_cmdline_yticks():
+    _, graph = parse_cmdline("--yticks 5")
+    assert graph.yticks == 5
+    _, graph = parse_cmdline("--yticks 5.5,11")
+    assert graph.yticks == [5.5, 11]
+
+
 def test_parse_cmdline_xlim():
     _, graph = parse_cmdline("--xlim 10 100")
     assert graph.xlim == (10, 100)

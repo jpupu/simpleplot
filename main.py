@@ -33,6 +33,7 @@ def tokenize(cmdline: str | list[str]) -> Iterator[str]:
 @dataclass
 class GraphSpec:
     xticks: float | list[float] | None = None
+    yticks: float | list[float] | None = None
     xlim: (float | None, float | None) = (None, None)
     ylim: (float | None, float | None) = (None, None)
 
@@ -176,6 +177,12 @@ def parse_cmdline(cmdline: str | list[str]) -> tuple[list[PlotSpec], GraphSpec]:
                 graph.xticks = [float(x) for x in s.split(",")]
             else:
                 graph.xticks = float(s)
+        elif token == "--yticks":
+            s = next(tokens)
+            if "," in s:
+                graph.yticks = [float(x) for x in s.split(",")]
+            else:
+                graph.yticks = float(s)
         elif token == "--xlim":
             graph.xlim = (
                 parse_float_or_none(next(tokens)),
@@ -282,6 +289,11 @@ def main():
             ax.set_xticks(graph.xticks)
         else:
             ax.xaxis.set_major_locator(AutoMultipleLocator(base=graph.xticks))
+    if graph.yticks is not None:
+        if type(graph.yticks) is list:
+            ax.set_yticks(graph.yticks)
+        else:
+            ax.yaxis.set_major_locator(AutoMultipleLocator(base=graph.yticks))
     ax.set_xlim(*graph.xlim)
     ax.set_ylim(*graph.ylim)
     ax.legend()
