@@ -171,11 +171,11 @@ def parse_cmdline(cmdline: str | list[str]) -> tuple[list[PlotSpec], GraphSpec]:
             if mlc is None:
                 raise CommandLineError(f"Invalid format: {fmt}")
             plot.marker, plot.linestyle, plot.color = mlc
-        # elif token == "scatter":
-        #     plot.setdefault("xexpr", "c1")
-        #     plot.setdefault("yexpr", "c2")
-        #     plot.setdefault("linestyle", "")
-        #     plot.setdefault("marker", "o")
+        elif token == "scatter":
+            plot.setdefault("xexpr", "c1")
+            plot.setdefault("yexpr", "c2")
+            plot.setdefault("linestyle", "")
+            plot.setdefault("marker", "o")
         elif token == "--xticks":
             s = next(tokens)
             if "," in s:

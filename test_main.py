@@ -102,6 +102,20 @@ def test_parse_cmdline_fmt():
         parse_cmdline("fmt badly")
 
 
+def test_parse_cmdline_scatter():
+    plots, _ = parse_cmdline("scatter")
+    assert plots[0].xexpr == "c1"
+    assert plots[0].yexpr == "c2"
+    assert plots[0].linestyle == ""
+    assert plots[0].marker == "o"
+
+    plots, _ = parse_cmdline("xexpr c3 yexpr c4 linestyle - marker . scatter")
+    assert plots[0].xexpr == "c3"
+    assert plots[0].yexpr == "c4"
+    assert plots[0].linestyle == "-"
+    assert plots[0].marker == "."
+
+
 def test_parse_cmdline_xticks():
     _, graph = parse_cmdline("--xticks 5")
     assert graph.xticks == 5
