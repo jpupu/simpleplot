@@ -58,10 +58,14 @@ def test_parse_cmdline_path():
 def test_parse_cmdline_xexpr():
     plots, graph = parse_cmdline("xexpr c1*2")
     assert plots[0].xexpr == "c1*2"
+    plots, graph = parse_cmdline("x c1*2")
+    assert plots[0].xexpr == "c1*2"
 
 
 def test_parse_cmdline_yexpr():
     plots, graph = parse_cmdline("yexpr c1*2")
+    assert plots[0].yexpr == "c1*2"
+    plots, graph = parse_cmdline("y c1*2")
     assert plots[0].yexpr == "c1*2"
 
 

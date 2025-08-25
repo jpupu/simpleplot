@@ -153,8 +153,13 @@ def parse_cmdline(cmdline: str | list[str]) -> tuple[list[PlotSpec], GraphSpec]:
     plots: list[PlotSpec] = []
     plot: PlotSpec = PlotSpec()
 
+    ALIASES = dict(x="xexpr", y="yexpr")
+
     tokens = tokenize(cmdline)
     for token in tokens:
+        if token in ALIASES:
+            token = ALIASES[token]
+
         if token in (",", "plot"):
             plots.append(plot)
             plot = PlotSpec()
