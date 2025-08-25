@@ -179,20 +179,31 @@ def test_parse_cmdline_multiple_plots_empty_plots_are_ignored():
 
 def test_build_plots_first_plot_inherits_defaults():
     oplots = build_plots([PlotSpec()])
+    for p in oplots:
+        p.label = None
     assert oplots == [PlotSpec.default()]
 
 
 def test_build_plots_unset_values_are_inherited():
     oplots = build_plots([PlotSpec(xexpr="c2")])
+    for p in oplots:
+        p.label = None
     assert oplots == [PlotSpec.default().replace(xexpr="c2")]
 
 
 def test_build_plots_inherits_from_previous_plot():
     oplots = build_plots([PlotSpec(xexpr="c2"), PlotSpec(yexpr="c3")])
+    for p in oplots:
+        p.label = None
     assert oplots == [
         PlotSpec.default().replace(xexpr="c2"),
         PlotSpec.default().replace(xexpr="c2", yexpr="c3"),
     ]
+
+
+def test_build_plots_automatic_labels():
+    oplots = build_plots([PlotSpec(path="foo")])
+    assert oplots[0].label == "foo:c1"
 
 
 @pytest.fixture

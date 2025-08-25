@@ -67,7 +67,7 @@ class PlotSpec:
             linestyle="-",
             marker="",
             color=None,
-            label="",
+            label=None,
         )
 
     def set(self, name: str, value: str) -> None:
@@ -218,7 +218,13 @@ def build_plots(attrlist: list[PlotSpec]) -> list[PlotSpec]:
 
     for attrs in attrlist:
         plot.update(attrs)
-        plots.append(plot.copy())
+
+        oplot = plot.copy()
+
+        if oplot.label is None:
+            oplot.label = f"{oplot.path}:{oplot.yexpr}"
+
+        plots.append(oplot)
 
     return plots
 
