@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
+from numpy.testing import assert_array_equal
 
+from load_data import load_file
 from main import (
     CommandLineError,
     PlotSpec,
@@ -208,11 +210,11 @@ def test_build_plots_automatic_labels():
 
 @pytest.fixture
 def data():
-    return np.array([[0, 0, 0], [1, 10, 100], [2, 20, 200]])
+    return load_file(["tens hundreds", "0 0", "10 100", "20 200"])
 
 
 def test_evalexpr_exposes_dataframe_as_data(data):
-    assert list(eval_expr("data[:,1]", data)) == [0, 10, 20]
+    assert_array_equal(eval_expr("data.col(1)", data), [0, 10, 20])
 
 
 def test_evalexpr_exposes_column_zero_as_i(data):
@@ -229,6 +231,12 @@ def test_evalexpr_exposes_columns_as_function_col_N(data):
     assert list(eval_expr("col(0)", data)) == [0, 1, 2]
     assert list(eval_expr("col(1)", data)) == [0, 10, 20]
     assert list(eval_expr("col(1+1)", data)) == [0, 100, 200]
+
+
+def test_evalexpr_exposes_columns_by_names(data):
+    assert list(eval_expr("rowno", data)) == [0, 1, 2]
+    assert list(eval_expr("tens", data)) == [0, 10, 20]
+    assert list(eval_expr("hundreds", data)) == [0, 100, 200]
 
 
 def test_evalexpr_exposes_numpy_math_functions(data):

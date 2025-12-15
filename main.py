@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
+from load_data import DataFrame, load_file
+
 
 class CommandLineError(RuntimeError):
     pass
@@ -229,28 +231,28 @@ def build_plots(attrlist: list[PlotSpec]) -> list[PlotSpec]:
     return plots
 
 
-def eval_expr(expr: str, data: np.ndarray) -> np.ndarray:
-    locals = dict(data=data, i=data[:, 0], col=lambda c: data[:, c])
-    for i in range(0, min(10, data.shape[1])):
-        locals[f"c{i}"] = data[:, i]
+def eval_expr(expr: str, data: DataFrame) -> np.ndarray:
+    locals = dict(data=data, i=data.col(0), col=lambda c: data.col(c))
+    for i in range(0, min(10, data.cols)):
+        locals[f"c{i}"] = data.col(i)
+    for name, col in data.columns.items():
+        locals[name] = col
 
     # Evaluate
     result = eval(expr, np.__dict__, locals)
 
     # Broadcast if scalar
     if np.isscalar(result):
-        result = np.ones(data.shape[0]) * result
+        result = np.ones(data.rows) * result
 
     return result
 
 
 def load_datas(specs: list[PlotSpec]) -> list[PlotData]:
-    def load_file(path: str) -> np.ndarray:
+    def load_file_helper(path) -> DataFrame:
         if path == "stdin":
-            path = sys.stdin
-        m = np.loadtxt(path, ndmin=2)
-        row_numbers = np.arange(m.shape[0])
-        return np.insert(m, 0, row_numbers, axis=1)
+            path = sys.stdin.readlines()
+        return load_file(path)
 
     def build_data(spec: PlotSpec) -> PlotData:
         data = dataset[spec.path]
@@ -266,7 +268,7 @@ def load_datas(specs: list[PlotSpec]) -> list[PlotData]:
         )
 
     paths = {s.path for s in specs}
-    dataset = {p: load_file(p) for p in paths}
+    dataset = {p: load_file_helper(p) for p in paths}
 
     return [build_data(spec) for spec in specs]
 
